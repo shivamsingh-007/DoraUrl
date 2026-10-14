@@ -1,0 +1,22 @@
+# Java build output
+*.class
+
+# Next.js
+doradora-next/node_modules/
+doradora-next/.next/
+doradora-next/out/
+doradora-next/dist/
+node_modules/
+.next/
+out/
+dist/
+
+# AI assistant local skills (regenerable via `uipro init`)
+.opencode/
+doradora-next/.opencode/
+
+# Misc
+*.log
+.DS_Store
+*.tsbuildinfo
+next-env.d.ts
