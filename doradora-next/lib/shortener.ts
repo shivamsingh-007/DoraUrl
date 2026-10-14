@@ -196,3 +196,10 @@ export function shortUrlFor(code: string): string {
   const base = url.toString().replace(/\/$/, "");
   return `${base}/#/r/${encodeURIComponent(code)}`;
 }
+
+/** Shareable path-style URL: <origin>/r/code — resolves server-side in any
+ *  browser/device once the server store is configured (falls back to the
+ *  local pocket via RClient when it isn't). */
+export function shortPathUrlFor(code: string): string {
+  return `${new URL(window.location.href).origin}/r/${encodeURIComponent(code)}`;
+}

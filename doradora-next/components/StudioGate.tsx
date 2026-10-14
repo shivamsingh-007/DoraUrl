@@ -111,7 +111,7 @@ export default function StudioGate() {
         </div>
       )}
       <p className="mt-4 text-center text-[12px] uppercase tracking-[0.18em] text-muted-ink">
-        Snowflake IDs · Base62 · Furoshiki TTL · Pocket guard — running entirely in your browser
+        Snowflake IDs · Base62 · Furoshiki TTL · Pocket guard — shareable anywhere
       </p>
     </section>
   );

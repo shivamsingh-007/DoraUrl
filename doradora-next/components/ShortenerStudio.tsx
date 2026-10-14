@@ -15,7 +15,7 @@ import {
   ShortCodeConflictError,
   createShortLink,
   isActive,
-  shortUrlFor,
+  shortPathUrlFor,
 } from "@/lib/shortener";
 import { store } from "@/lib/store";
 
@@ -99,18 +99,77 @@ export default function ShortenerStudio() {
     clicks,
   };
 
-  function onShorten(e: React.FormEvent) {
+  async function onShorten(e: React.FormEvent) {
     e.preventDefault();
     const ttlNum = ttl.trim() === "" ? null : parseInt(ttl, 10);
     if (ttl.trim() !== "" && (Number.isNaN(ttlNum) || (ttlNum as number) < 60)) {
       setNotice({ kind: "err", text: "The Furoshiki needs at least 60 seconds, or leave it off." });
       return;
     }
+    const longUrl = url.trim();
+    // Server-first: minted links resolve in ANY browser/device once the
+    // server store is configured. 503 / network failure falls through to
+    // the original local-only mode below.
+    try {
+      const res = await fetch("/api/links", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          longUrl,
+          alias: alias.trim() || null,
+          ttlSeconds: ttlNum,
+        }),
+      });
+      if (res.ok) {
+        const data = (await res.json()) as { code: string; reused: boolean };
+        const nowMs = Date.now();
+        const mirrored =
+          links.some((l) => l.code === data.code || l.url === longUrl)
+            ? links
+            : [
+                ...links,
+                {
+                  code: data.code,
+                  url: longUrl,
+                  createdAt: nowMs,
+                  expiresAt:
+                    ttlNum !== null && !Number.isNaN(ttlNum)
+                      ? nowMs + (ttlNum as number) * 1000
+                      : null,
+                },
+              ];
+        store.setLinksStore(mirrored);
+        const share = shortPathUrlFor(data.code);
+        setNotice({
+          kind: data.reused ? "info" : "ok",
+          text: data.reused
+            ? `Memory Bread remembers — reusing “${data.code}”. Works everywhere: ${share}`
+            : `“${data.code}” hopped out of the Door. Works everywhere: ${share}`,
+        });
+        setUrl("");
+        setAlias("");
+        return;
+      }
+      if (res.status !== 503) {
+        let msg = "Could not create the link — try again.";
+        try {
+          const j = (await res.json()) as { message?: unknown };
+          if (typeof j?.message === "string") msg = j.message;
+        } catch {
+          /* keep default */
+        }
+        setNotice({ kind: "err", text: msg });
+        return;
+      }
+      // 503 NO_STORE → local-only fallback below.
+    } catch {
+      // Network failure → local-only fallback below.
+    }
     try {
       const { links: next, code, reused } = createShortLink(
         links,
         worker,
-        url,
+        longUrl,
         alias || null,
         ttlNum,
       );
@@ -118,8 +177,8 @@ export default function ShortenerStudio() {
       setNotice({
         kind: reused ? "info" : "ok",
         text: reused
-          ? `Memory Bread remembers — reusing “${code}”.`
-          : `“${code}” hopped out of the Door. Your short link is below.`,
+          ? `Memory Bread remembers — reusing “${code}” (this browser only — server store is off).`
+          : `“${code}” hopped out of the Door (this browser only — server store is off).`,
       });
       setUrl("");
       setAlias("");
@@ -134,7 +193,9 @@ export default function ShortenerStudio() {
 
   async function copy(code: string) {
     try {
-      await navigator.clipboard.writeText(shortUrlFor(code));
+      // Path-style links resolve everywhere (server) and fall back to the
+      // local pocket (RClient) where the server has no record.
+      await navigator.clipboard.writeText(shortPathUrlFor(code));
       setCopied(code);
       setTimeout(() => setCopied((c) => (c === code ? null : c)), 1400);
     } catch {
@@ -283,7 +344,7 @@ export default function ShortenerStudio() {
                 className="flex items-center gap-3 rounded-xl border border-white/10 bg-white/[0.05] px-3.5 py-3 transition-colors duration-200 hover:border-bell/40 hover:bg-white/[0.08]"
               >
                 <a
-                  href={`#/r/${encodeURIComponent(l.code)}`}
+                  href={`/r/${encodeURIComponent(l.code)}`}
                   title={`Step through (counts a bell ring)`}
                   className="flex cursor-pointer items-center gap-1.5 font-code text-[13px] font-semibold text-bell-soft hover:text-white"
                 >
