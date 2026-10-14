@@ -68,12 +68,14 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
     >
       <body className="min-h-full flex flex-col bg-sky text-ink font-body">
         {/* Pre-hydration fast path: if this is a #/r/<code> deep link, hop
-            before React even boots so the homepage never flashes. Guarded,
-            dependency-free, and mirrored by <DoorRedirect /> post-hydration
-            (which also counts the bell ring + handles hashchange). */}
+            before React even boots so the homepage never flashes. An overlay
+            covers the wait while the destination loads (the old page stays
+            painted until the new one arrives, which is the perceived "slow"
+            part). Mirrored by <DoorRedirect /> post-hydration (bell ring +
+            hashchange). */}
         <script
           dangerouslySetInnerHTML={{
-            __html: `(function(){try{var m=(location.hash||'').match(/^#\\/r\\/(.+)$/);if(!m)return;var code='';try{code=decodeURIComponent(m[1]);}catch(e){return;}var raw=null;try{raw=localStorage.getItem('doradora_links_v2');}catch(e){return;}if(!raw)return;var links=null;try{links=JSON.parse(raw);}catch(e){return;}if(!Array.isArray(links))return;var hit=null;for(var i=0;i<links.length;i++){if(links[i]&&links[i].code===code){hit=links[i];break;}}if(!hit||!hit.url)return;if(hit.expiresAt!=null&&Date.now()>hit.expiresAt)return;try{var n=parseInt(localStorage.getItem('doradora_clicks_v2')||'0',10);if(isNaN(n))n=0;localStorage.setItem('doradora_clicks_v2',String(n+1));}catch(e){}location.replace(hit.url);}catch(e){}})();`,
+            __html: `(function(){try{var m=(location.hash||'').match(/^#\\/r\\/(.+)$/);if(!m)return;var code='';try{code=decodeURIComponent(m[1]);}catch(e){return;}var raw=null;try{raw=localStorage.getItem('doradora_links_v2');}catch(e){return;}if(!raw)return;var links=null;try{links=JSON.parse(raw);}catch(e){return;}if(!Array.isArray(links))return;var hit=null;for(var i=0;i<links.length;i++){if(links[i]&&links[i].code===code){hit=links[i];break;}}if(!hit||!hit.url)return;if(hit.expiresAt!=null&&Date.now()>hit.expiresAt)return;try{var n=parseInt(localStorage.getItem('doradora_clicks_v2')||'0',10);if(isNaN(n))n=0;localStorage.setItem('doradora_clicks_v2',String(n+1));}catch(e){}try{var d=document.createElement('div');d.id='door-hop';d.setAttribute('style','position:fixed;inset:0;z-index:99999;display:flex;flex-direction:column;gap:10px;align-items:center;justify-content:center;background:#e9f4fb;color:#0b2e44;font-family:system-ui,-apple-system,sans-serif;');var t=document.createElement('p');t.setAttribute('style','margin:0;font-size:12px;font-weight:700;letter-spacing:.22em;text-transform:uppercase;opacity:.65');t.textContent='Opening the Anywhere Door';var s=document.createElement('p');s.setAttribute('style','margin:0;font-size:14px;opacity:.55');s.textContent='Hopping to your link…';d.appendChild(t);d.appendChild(s);document.body.appendChild(d);}catch(e){}location.replace(hit.url);}catch(e){}})();`,
           }}
         />
         <DoorRedirect />
