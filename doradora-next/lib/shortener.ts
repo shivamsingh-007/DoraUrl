@@ -188,8 +188,11 @@ export function saveClicks(n: number): void {
   }
 }
 
-/** Short URLs resolve locally: <page-url>#/r/code — works on any host. */
+/** Short URLs resolve locally: <page-url>/#/r/code — works on any host. */
 export function shortUrlFor(code: string): string {
-  const base = window.location.href.split("#")[0].replace(/\/$/, "");
-  return `${base}#/r/${encodeURIComponent(code)}`;
+  const url = new URL(window.location.href);
+  url.hash = "";
+  url.search = "";
+  const base = url.toString().replace(/\/$/, "");
+  return `${base}/#/r/${encodeURIComponent(code)}`;
 }

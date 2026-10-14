@@ -65,13 +65,20 @@ export default function ShortenerStudio() {
   const [copied, setCopied] = useState<string | null>(null);
   const urlRef = useRef<HTMLInputElement>(null);
 
-  // Resolve #/r/<code> deep links locally (subscription; initial pass deferred
-  // to a task so the effect body itself stays free of synchronous setState).
+  // Error-only listener for #/r/<code> deep links. Successful hops are owned
+  // by <DoorRedirect /> (layout-level: pre-hydration script + hashchange),
+  // so this effect only surfaces "unknown / expired" notices and never
+  // redirects or counts clicks itself — otherwise one hop rings the bell twice.
   useEffect(() => {
-    const resolve = () => {
+    const check = () => {
       const m = window.location.hash.match(/^#\/r\/(.+)$/);
       if (!m) return;
-      const code = decodeURIComponent(m[1]);
+      let code = "";
+      try {
+        code = decodeURIComponent(m[1]);
+      } catch {
+        return;
+      }
       const hit = store.getLinksSnapshot().find((l) => l.code === code);
       if (!hit) {
         setNotice({ kind: "err", text: `No gadget by the name “${code}”. It may live in another browser's pocket.` });
@@ -79,17 +86,11 @@ export default function ShortenerStudio() {
       }
       if (hit.expiresAt !== null && Date.now() > hit.expiresAt) {
         setNotice({ kind: "err", text: `The Furoshiki has unwrapped — link “${code}” has expired.` });
-        return;
       }
-      store.setClicksStore(store.getClicksSnapshot() + 1);
-      window.location.replace(hit.url);
     };
-    const t = setTimeout(resolve, 0);
-    window.addEventListener("hashchange", resolve);
-    return () => {
-      clearTimeout(t);
-      window.removeEventListener("hashchange", resolve);
-    };
+    check();
+    window.addEventListener("hashchange", check);
+    return () => window.removeEventListener("hashchange", check);
   }, []);
 
   const stats = {

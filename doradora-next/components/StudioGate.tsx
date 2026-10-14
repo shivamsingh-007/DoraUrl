@@ -1,15 +1,30 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Flashlight, FlashlightOff } from "lucide-react";
 import Image from "next/image";
 import ShortenerStudio from "./ShortenerStudio";
 import Reveal from "./Reveal";
 
+function isDoorHash(): boolean {
+  return typeof window !== "undefined" && /^#\/r\/.+$/.test(window.location.hash);
+}
+
 export default function StudioGate() {
-  const [open, setOpen] = useState(false);
+  // Deep links (#/r/<code>) auto-open the lab so unknown/expired codes show
+  // their error notice instead of stranding the user on the homepage.
+  // (Valid codes redirect away via DoorRedirect before this matters.)
+  const [open, setOpen] = useState<boolean>(isDoorHash);
   const labRef = useRef<HTMLDivElement>(null);
   const gateRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const onHash = () => {
+      if (isDoorHash()) setOpen(true);
+    };
+    window.addEventListener("hashchange", onHash);
+    return () => window.removeEventListener("hashchange", onHash);
+  }, []);
 
   function shine() {
     setOpen(true);
